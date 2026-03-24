@@ -1,0 +1,138 @@
+# Light Novel Downloader & Ebook Builder
+
+A Python tool that downloads web novels and light novels from online translation sites, cleans the content, and builds EPUB and Kindle (AZW3) ebooks automatically.
+
+This project is designed as a learning project, but it is structured like a real content pipeline.
+
+## Features
+
+Current features:
+
+- Detect supported source websites
+- Fetch novel title metadata
+- Fetch chapter lists
+- Download chapters
+- Clean HTML content
+- Save chapters as JSON as a local archive
+- Skip already downloaded chapters
+- Build EPUB from the local archive
+- Convert EPUB to AZW3 for Kindle
+- Resume downloads safely
+- Retry failed requests
+- Add delays between requests to avoid hammering websites
+
+## Project Structure
+
+    light-novel/
+    ├── main.py                 # Main program
+    ├── config.py               # Configuration placeholder
+    ├── README.md
+    ├── .gitignore
+    ├── models/                 # Data models
+    │   └── schemas.py
+    ├── sources/                # Website scrapers
+    │   ├── base.py
+    │   ├── registry.py
+    │   ├── shmtranslations.py
+    │   └── novelupdates.py
+    ├── services/               # Core services
+    │   ├── downloader.py
+    │   ├── normalizer.py
+    │   ├── epub_builder.py
+    │   └── ordering.py
+    ├── output/                 # Downloaded novels
+    │   └── <novel-name>/
+    │       ├── meta.json
+    │       ├── chapters/
+    │       │   ├── 0001.json
+    │       │   ├── 0002.json
+    │       │   └── ...
+    │       ├── book.epub
+    │       └── book.azw3
+    └── temp/                   # Temporary files
+
+## How It Works
+
+Pipeline:
+
+    Website → Scraper → Cleaner → JSON Archive → EPUB → AZW3 (Kindle)
+
+The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
+
+## Requirements
+
+- Python 3.10+
+- Calibre, for EPUB to AZW3 conversion
+- Python packages:
+  - requests
+  - beautifulsoup4
+  - lxml
+  - ebooklib
+  - python-slugify
+
+Install Python packages with:
+
+    pip install requests beautifulsoup4 lxml ebooklib python-slugify
+
+Check Calibre CLI with:
+
+    ebook-convert --version
+
+If needed on macOS, add Calibre to PATH with:
+
+    export PATH="$PATH:/Applications/calibre.app/Contents/MacOS"
+
+## Usage
+
+Run the script with:
+
+    python main.py <novel_url>
+
+Example:
+
+    python main.py https://www.shmtranslations.com/ongoing/farming-life-in-another-world/
+
+Already downloaded chapters are skipped automatically.
+
+## Output
+
+For each novel, the script creates:
+
+    output/<novel-name>/
+    ├── meta.json
+    ├── chapters/
+    ├── <novel-name>.epub
+    └── <novel-name>.azw3
+
+These files can be transferred directly to Kindle.
+
+## Supported Sources
+
+Current support:
+
+- shmtranslations.com
+- novelupdates.com for limited metadata testing
+
+The system is designed so new sources can be added later.
+
+## Future Improvements
+
+Planned ideas:
+
+- Better metadata and cover download
+- Chapter range selection
+- Additional novel sites
+- GUI interface
+- Send-to-Kindle automation
+- AI chapter summaries
+- Translation pipeline
+- Web interface for library management
+
+## Disclaimer
+
+This project is for personal use and educational purposes.
+Please support original authors and translators by visiting their websites.
+
+## Author
+
+Personal learning project by Rooz.
