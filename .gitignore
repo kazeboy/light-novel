@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Output files (generated books & chapters)
+output/*
+temp/*
+
+# Keep folders but not contents
+!output/.gitkeep
+!temp/.gitkeep
+
+# Environment files
+.env
