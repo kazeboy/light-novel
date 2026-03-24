@@ -4,6 +4,29 @@ from services.downloader import create_novel_folder, save_meta, save_chapter, do
 from services.epub_builder import build_epub, build_epub_from_json, convert_epub_to_azw3
 from sources.novelupdates import NovelUpdatesSource
 
+def parse_chapter_range(range_input: str, total_chapters: int):
+    range_input = range_input.strip()
+
+    if not range_input:
+        return 1, total_chapters
+
+    if "-" not in range_input:
+        end = min(int(range_input), total_chapters)
+        return 1, end
+
+    start_str, end_str = range_input.split("-", 1)
+
+    start = int(start_str) if start_str else 1
+    end = int(end_str) if end_str else total_chapters
+
+    start = max(1, start)
+    end = min(total_chapters, end)
+
+    if start > end:
+        start, end = end, start
+
+    return start, end
+
 
 def main():
     if len(sys.argv) < 2:
@@ -60,20 +83,27 @@ def main():
             print("Continuing without external metadata.")
     save_meta(folder, meta)
 
-    download_limit_input = input("Download how many chapters? Press Enter for all: ").strip()
+    range_input = input(
+        "Enter chapter range:\n"
+        "  Press Enter = all chapters\n"
+        "  50 = chapters 1 to 50\n"
+        "  15-55 = chapters 15 to 55\n"
+        "  500- = chapter 500 to end\n"
+        "  -100 = start to chapter 100\n"
+        "Range: "
+    )
 
-    if download_limit_input:
-       download_limit = min(int(download_limit_input), len(chapters))
-    else:
-       download_limit = len(chapters)
-
-    print(f"Preparing to process {download_limit} chapters...")
+    start_ch, end_ch = parse_chapter_range(range_input, len(chapters))
+    print(f"Processing chapters {start_ch} to {end_ch}...")
 
     downloaded_count = 0
     skipped_count = 0
     failed_count = 0
 
-    for i, ch in enumerate(chapters[:download_limit], start=1):
+    for i, ch in enumerate(chapters, start=1):
+        if i < start_ch or i > end_ch:
+            continue
+
         if chapter_file_exists(folder, i):
             print(f"Skipping chapter {i}: already exists")
             skipped_count += 1
@@ -85,12 +115,12 @@ def main():
             chapter = source.get_chapter_content(ch.url)
 
             chapter_data = {
-               "index": i,
-               "chapter_number": chapter.chapter_number,
-               "title": chapter.title,
-               "source_url": chapter.url,
-               "text": chapter.text,
-               "html": chapter.html,
+                "index": i,
+                "chapter_number": chapter.chapter_number,
+                "title": chapter.title,
+                "source_url": chapter.url,
+                "text": chapter.text,
+                "html": chapter.html,
             }
 
             save_chapter(folder, i, chapter_data)
