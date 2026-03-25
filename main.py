@@ -1,7 +1,7 @@
 import sys
 from sources.registry import get_source_for_url
 from services.downloader import create_novel_folder, save_meta, save_chapter, chapter_file_exists, download_cover
-from services.epub_builder import build_epub, build_epub_from_json, convert_epub_to_azw3
+from services.epub_builder import build_epub_from_json, convert_epub_to_azw3
 from services.metadata_fetcher import derive_search_title, resolve_metadata, search_novelupdates_results, choose_novelupdates_result, fetch_novelupdates_metadata
 
 def parse_chapter_range(range_input: str, total_chapters: int):
