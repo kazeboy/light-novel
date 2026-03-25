@@ -9,13 +9,15 @@ This project is designed as a learning project, but it is structured like a real
 Current features:
 
 - Detect supported source websites
-- Fetch novel title metadata
+- Fetch novel metadata (title, author, description)
+- Download cover image
 - Fetch chapter lists
 - Download chapters
 - Clean HTML content
-- Save chapters as JSON as a local archive
+- Save chapters as JSON as a local archive (source of truth)
 - Skip already downloaded chapters
-- Build EPUB from the local archive
+- Build EPUB from the local JSON archive
+- Embed cover and metadata into EPUB
 - Convert EPUB to AZW3 for Kindle
 - Resume downloads safely
 - Retry failed requests
@@ -41,21 +43,28 @@ Current features:
     │   ├── epub_builder.py
     │   └── ordering.py
     ├── output/                 # Downloaded novels
-    │   └── <novel-name>/
+    │   └── <source-slug>/      # Folder name based on source URL
     │       ├── meta.json
+    │       ├── cover.jpg
     │       ├── chapters/
     │       │   ├── 0001.json
     │       │   ├── 0002.json
     │       │   └── ...
-    │       ├── book.epub
-    │       └── book.azw3
+    │       ├── <book-title>.epub
+    │       └── <book-title>.azw3
     └── temp/                   # Temporary files
 
 ## How It Works
 
 Pipeline:
 
-    Website → Scraper → Cleaner → JSON Archive → EPUB → AZW3 (Kindle)
+    Website → Scraper → Cleaner → JSON Archive
+                                 ↓
+                          Metadata + Cover
+                                 ↓
+                               EPUB
+                                 ↓
+                              AZW3 (Kindle)
 
 The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
 
@@ -98,13 +107,14 @@ Already downloaded chapters are skipped automatically.
 
 For each novel, the script creates:
 
-    output/<novel-name>/
-    ├── meta.json
-    ├── chapters/
-    ├── <novel-name>.epub
-    └── <novel-name>.azw3
+    output/<source-slug>/
+    ├── meta.json          # Title, author, description, cover path, etc.
+    ├── cover.jpg
+    ├── chapters/          # Raw cleaned chapter archive
+    ├── <book-title>.epub
+    └── <book-title>.azw3
 
-These files can be transferred directly to Kindle.
+The folder name is based on the source website URL, while the EPUB/AZW3 filenames are based on the official book title metadata.
 
 ## Supported Sources
 
