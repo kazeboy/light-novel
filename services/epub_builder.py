@@ -23,8 +23,11 @@ def load_chapter_files(folder: str) -> list[dict]:
     for filename in files:
         path = os.path.join(chapters_folder, filename)
         with open(path, "r", encoding="utf-8") as f:
-            chapters.append(json.load(f))
+            data = json.load(f)
+            data["__source_filename"] = filename
+            chapters.append(data)
 
+    chapters.sort(key=lambda ch: ch.get("index", 0))
     return chapters
 
 
@@ -51,21 +54,12 @@ def build_epub_from_json(folder: str) -> str:
         with open(cover_path, "rb") as f:
             book.set_cover("cover.jpg", f.read(), create_page=True)
 
-    chapters_folder = os.path.join(folder, "chapters")
-    chapter_files = sorted(
-        f for f in os.listdir(chapters_folder)
-        if f.endswith(".json")
-    )
-
+    chapters = load_chapter_files(folder)
     epub_chapters = []
 
-    for file in chapter_files:
-        path = os.path.join(chapters_folder, file)
-
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        chapter_title = data.get("title") or file.replace(".json", "")
+    for data in chapters:
+        chapter_index = data.get("index", 0)
+        chapter_title = data.get("title") or f"Chapter {chapter_index}"
         chapter_html = (data.get("html") or "").strip()
         chapter_text = (data.get("text") or "").strip()
 
@@ -80,9 +74,11 @@ def build_epub_from_json(folder: str) -> str:
             else:
                 chapter_html = "<p>No content available.</p>"
 
+        chapter_file_name = f"chapter-{chapter_index:04d}.xhtml"
+
         chapter = epub.EpubHtml(
             title=escape(chapter_title),
-            file_name=file.replace(".json", ".xhtml"),
+            file_name=chapter_file_name,
             lang="en"
         )
 

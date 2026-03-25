@@ -25,7 +25,7 @@ def fetch_page(url: str, retries: int = 3, delay: float = 2.0) -> str:
             print(e)
 
             if attempt < retries - 1:
-                time.sleep(2)
+                time.sleep(1)
             else:
                 raise
 
@@ -47,7 +47,8 @@ def save_meta(folder: str, meta: dict):
 
 
 def save_chapter(folder: str, index: int, chapter_data: dict):
-    filename = f"{index:04d}.json"
+    safe_title = slugify(chapter_data.get("title") or f"chapter-{index}")
+    filename = f"{index:04d} - {safe_title}.json"
     path = os.path.join(folder, "chapters", filename)
 
     with open(path, "w", encoding="utf-8") as f:
@@ -68,6 +69,14 @@ def download_cover(folder: str, cover_url: str) -> str:
     return cover_path
 
 def chapter_file_exists(folder: str, index: int) -> bool:
-    filename = f"{index:04d}.json"
-    path = os.path.join(folder, "chapters", filename)
-    return os.path.exists(path)
+    chapters_folder = os.path.join(folder, "chapters")
+    prefix = f"{index:04d}"
+
+    if not os.path.isdir(chapters_folder):
+        return False
+
+    for filename in os.listdir(chapters_folder):
+        if filename.startswith(prefix) and filename.endswith(".json"):
+            return True
+
+    return False
