@@ -28,67 +28,6 @@ def load_chapter_files(folder: str) -> list[dict]:
     return chapters
 
 
-def build_epub(folder: str) -> str:
-    meta = load_meta(folder)
-    chapters = load_chapter_files(folder)
-
-    title = meta.get("title", "Untitled Novel")
-    book_slug = slugify(title)
-
-    book = epub.EpubBook()
-    book.set_identifier(book_slug)
-    book.set_title(title)
-    book.set_language("en")
-
-    author = meta.get("author") or "Unknown"
-    book.add_author(author)
-
-    description = meta.get("description")
-    if description:
-       book.add_metadata("DC", "description", description)
-
-    epub_chapters = []
-
-    for ch in chapters:
-        index = ch["index"]
-        chapter_title = ch.get("title") or f"Chapter {index}"
-        chapter_html = ch.get("html", "")
-
-        file_name = f"chap_{index:04d}.xhtml"
-        epub_chapter = epub.EpubHtml(
-            title=chapter_title,
-            file_name=file_name,
-            lang="en"
-        )
-
-        epub_chapter.content = f"""
-        <html>
-          <head><title>{chapter_title}</title></head>
-          <body>
-            <h1>{chapter_title}</h1>
-            {chapter_html}
-          </body>
-        </html>
-        """
-
-        book.add_item(epub_chapter)
-        epub_chapters.append(epub_chapter)
-
-    book.toc = tuple(epub_chapters)
-    book.spine = ["nav"] + epub_chapters
-
-    book.add_item(epub.EpubNcx())
-    book.add_item(epub.EpubNav())
-
-    output_path = os.path.join(folder, f"{book_slug}.epub")
-    cover_path = meta.get("cover_path")
-    if cover_path and os.path.exists(cover_path):
-       with open(cover_path, "rb") as f:
-           book.set_cover("cover.jpg", f.read())
-    epub.write_epub(output_path, book)
-
-    return output_path
-
 def build_epub_from_json(folder: str) -> str:
     meta_path = os.path.join(folder, "meta.json")
 
