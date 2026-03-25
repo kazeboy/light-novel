@@ -54,9 +54,11 @@ def save_chapter(folder: str, index: int, chapter_data: dict):
         json.dump(chapter_data, f, indent=2, ensure_ascii=False)
 
 def download_cover(folder: str, cover_url: str) -> str:
-    import requests
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    }
 
-    response = requests.get(cover_url, timeout=30)
+    response = requests.get(cover_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     cover_path = os.path.join(folder, "cover.jpg")
