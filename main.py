@@ -1,8 +1,8 @@
 import sys
 from sources.registry import get_source_for_url
-from services.downloader import create_novel_folder, save_meta, save_chapter, download_cover, chapter_file_exists
+from services.downloader import create_novel_folder, save_meta, save_chapter, chapter_file_exists, download_cover
 from services.epub_builder import build_epub, build_epub_from_json, convert_epub_to_azw3
-from sources.novelupdates import NovelUpdatesSource
+from services.metadata_fetcher import derive_search_title, resolve_metadata, search_novelupdates_results, choose_novelupdates_result, fetch_novelupdates_metadata
 
 def parse_chapter_range(range_input: str, total_chapters: int):
     range_input = range_input.strip()
@@ -29,11 +29,11 @@ def parse_chapter_range(range_input: str, total_chapters: int):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <novel_url>")
-        return
+    url = input("Novel URL: ").strip()
 
-    url = sys.argv[1]
+    if not url:
+       print("No URL provided.")
+       return
     source = get_source_for_url(url)
 
     if source is None:
@@ -45,6 +45,28 @@ def main():
     print("Fetching novel metadata...")
     novel = source.get_novel_metadata(url)
     print(f"Title: {novel.title}")
+    search_title = derive_search_title(novel.title, url)
+    print(f"Search title: {search_title}")
+    resolved_metadata = resolve_metadata(search_title)
+    print(f"Metadata title: {resolved_metadata['title']}")
+    nu_results = search_novelupdates_results(search_title)
+    print(f"NovelUpdates results found: {len(nu_results)}")
+
+    if nu_results:
+        nu_result = choose_novelupdates_result(nu_results)
+        print(f"NovelUpdates chosen result: {nu_result}")
+
+        if nu_result:
+            fetched_metadata = fetch_novelupdates_metadata(nu_result)
+            print(f"Fetched title: {fetched_metadata['title']}")
+            print(f"Fetched author: {fetched_metadata['author']}")
+            print(f"Fetched cover URL: {fetched_metadata['cover_url']}")
+        else:
+            fetched_metadata = None
+    else:
+        nu_result = None
+        fetched_metadata = None
+        print("No NovelUpdates matches found.")
 
     print("Fetching chapter list...")
     chapters = source.get_chapter_list(url)
@@ -61,26 +83,19 @@ def main():
         "title": novel.title,
         "source_url": url,
         "total_chapters": len(chapters),
-        "author": "Kinosuke Naito",
-        "description": "A man is reincarnated into another world and begins a slow farming life while building a village and community.",
     }
-    # Try to fetch metadata from NovelUpdates
-    nu = NovelUpdatesSource()
-    nu_url = input("Enter NovelUpdates URL (or press Enter to skip): ").strip()
 
-    if nu_url:
-        try:
-            nu_meta = nu.get_novel_metadata(nu_url)
-            meta["author"] = nu_meta.author
-            meta["description"] = nu_meta.description
+    if fetched_metadata:
+        meta.update({k: v for k, v in fetched_metadata.items() if v})
 
-            if nu_meta.cover_url:
-                cover_path = download_cover(folder, nu_meta.cover_url)
+        if fetched_metadata.get("cover_url"):
+            try:
+                cover_path = download_cover(folder, fetched_metadata["cover_url"])
                 meta["cover_path"] = cover_path
-            print("NovelUpdates metadata added.")
-        except Exception as e:
-            print(f"Could not fetch NovelUpdates metadata: {e}")
-            print("Continuing without external metadata.")
+                print(f"Cover downloaded to: {cover_path}")
+            except Exception as e:
+                print(f"Could not download cover: {e}")
+
     save_meta(folder, meta)
 
     range_input = input(

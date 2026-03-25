@@ -3,6 +3,7 @@ import json
 from ebooklib import epub
 from slugify import slugify
 import subprocess
+from html import escape
 
 
 def load_meta(folder: str) -> dict:
@@ -96,14 +97,26 @@ def build_epub_from_json(folder: str) -> str:
 
     title = meta.get("title", "Unknown Title")
     author = meta.get("author", "Unknown")
+    book_slug = slugify(title)
 
     book = epub.EpubBook()
+    book.set_identifier(book_slug)
     book.set_title(title)
     book.set_language("en")
     book.add_author(author)
+    description = meta.get("description")
+    cover_path = meta.get("cover_path")
+    if description:
+        book.add_metadata("DC", "description", description)
+    if cover_path and os.path.exists(cover_path):
+        with open(cover_path, "rb") as f:
+            book.set_cover("cover.jpg", f.read(), create_page=True)
 
     chapters_folder = os.path.join(folder, "chapters")
-    chapter_files = sorted(os.listdir(chapters_folder))
+    chapter_files = sorted(
+        f for f in os.listdir(chapters_folder)
+        if f.endswith(".json")
+    )
 
     epub_chapters = []
 
@@ -113,22 +126,45 @@ def build_epub_from_json(folder: str) -> str:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        chapter_title = data.get("title") or file.replace(".json", "")
+        chapter_html = (data.get("html") or "").strip()
+        chapter_text = (data.get("text") or "").strip()
+
+        if not chapter_html:
+            if chapter_text:
+                paragraphs = "".join(
+                    f"<p>{escape(paragraph.strip())}</p>"
+                    for paragraph in chapter_text.split("\n\n")
+                    if paragraph.strip()
+                )
+                chapter_html = paragraphs or "<p>No content available.</p>"
+            else:
+                chapter_html = "<p>No content available.</p>"
+
         chapter = epub.EpubHtml(
-            title=data["title"],
-            file_name=f"{file.replace('.json', '.xhtml')}",
+            title=escape(chapter_title),
+            file_name=file.replace(".json", ".xhtml"),
             lang="en"
         )
 
-        chapter.content = f"<h1>{data['title']}</h1>{data['html']}"
+        chapter.content = f"""
+        <html>
+          <head><title>{escape(chapter_title)}</title></head>
+          <body>
+            <h1>{escape(chapter_title)}</h1>
+            {chapter_html}
+          </body>
+        </html>
+        """
         book.add_item(chapter)
         epub_chapters.append(chapter)
 
     book.toc = epub_chapters
-    book.spine = ["nav"] + epub_chapters
+    book.spine = ["cover", "nav"] + epub_chapters
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
 
-    epub_path = os.path.join(folder, f"{title}.epub")
+    epub_path = os.path.join(folder, f"{book_slug}.epub")
     epub.write_epub(epub_path, book)
 
     return epub_path
