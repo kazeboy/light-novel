@@ -25,7 +25,7 @@ def fetch_page(url: str, retries: int = 3, delay: float = 2.0) -> str:
             print(e)
 
             if attempt < retries - 1:
-                time.sleep(1)
+                time.sleep(0.1)
             else:
                 raise
 
