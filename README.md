@@ -216,6 +216,7 @@ Planned ideas:
 
 This project is for personal use and educational purposes.
 Please support original authors and translators by visiting their websites.
+This tool does not host or distribute any copyrighted content. It only downloads content from publicly accessible web pages for personal offline reading.
 
 ## Author
 
