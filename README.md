@@ -50,8 +50,8 @@ Current features:
     │       │   ├── 0001.json
     │       │   ├── 0002.json
     │       │   └── ...
-    │       ├── <book-title>.epub
-    │       └── <book-title>.azw3
+    │       ├── <source-slug>.epub
+    │       └── <source-slug>.azw3
     └── temp/                   # Temporary files
 
 ## How It Works
@@ -118,19 +118,20 @@ For each novel, the script creates:
     ├── meta.json          # Title, author, description, cover path, etc.
     ├── cover.jpg
     ├── chapters/          # Raw cleaned chapter archive
-    ├── <book-title>.epub
-    └── <book-title>.azw3
+    ├── <source-slug>.epub
+    └── <source-slug>.azw3
 
-The folder name is based on the source website URL, while the EPUB/AZW3 filenames are based on the official book title metadata.
+The folder name is based on the source website URL (slug), and the EPUB/AZW3 filenames are also based on the same slug for consistency and filesystem-safe naming. The official book title and other metadata are embedded inside the EPUB/AZW3 metadata instead.
 
 ## Supported Sources
 
 Current support:
 
-- shmtranslations.com
-- novelupdates.com for limited metadata testing
+- shmtranslations.com (chapter source)
+- novelfull.com (chapter source)
+- novelupdates.com (metadata source)
 
-The system is designed so new sources can be added later.
+The system is designed so new sources can be added easily via the source registry and scraper interface.
 
 ## Future Improvements
 
