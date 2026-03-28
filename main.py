@@ -158,6 +158,26 @@ def main():
 
     print(f"Source detected: {source.__class__.__name__}")
 
+    furigana_mode = "none"
+    if source.__class__.__name__ == "SyosetuSource":
+        print("\nFurigana mode:")
+        print("  1. Normal EPUB")
+        print("  2. Furigana on all kanji")
+        print("  3. Furigana on rare kanji")
+
+        while True:
+            furigana_choice = input("Select furigana mode [1-3]: ").strip()
+            if furigana_choice == "1":
+                furigana_mode = "none"
+                break
+            if furigana_choice == "2":
+                furigana_mode = "all"
+                break
+            if furigana_choice == "3":
+                furigana_mode = "rare"
+                break
+            print("Invalid choice. Enter 1, 2, or 3.")
+
     folder = get_novel_folder_path_from_url(url)
     existing_info = get_existing_novel_info(folder)
     action = None
@@ -299,7 +319,7 @@ def main():
     print(f"Failed: {failed_count}")
 
     print("Building EPUB...")
-    epub_path = build_epub_from_json(folder)
+    epub_path = build_epub_from_json(folder, furigana_mode=furigana_mode)
     print(f"EPUB created: {epub_path}")
     print("Converting EPUB to AZW3...")
     try:
