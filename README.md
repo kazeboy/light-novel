@@ -9,15 +9,15 @@ This project is designed as a learning project, but it is structured like a real
 Current features:
 
 - Detect supported source websites
-- Fetch novel metadata (title, author, description)
+- Fetch novel metadata (title, author, description, alternative titles, genre, rating, year, status, country of origin)
 - Download cover image
-- Fetch chapter lists
-- Download chapters
+- Fetch chapter lists (with duplicate chapter detection and removal)
+- Download chapters using persistent browser sessions when needed (Playwright for protected sites)
 - Clean HTML content
 - Save chapters as JSON as a local archive (source of truth)
 - Skip already downloaded chapters
 - Build EPUB from the local JSON archive
-- Embed cover and metadata into EPUB
+- Embed cover and full metadata into EPUB (including custom info page)
 - Convert EPUB to AZW3 for Kindle
 - Resume downloads safely
 - Retry failed requests
@@ -58,13 +58,13 @@ Current features:
 
 Pipeline:
 
-    Website → Scraper → Cleaner → JSON Archive
-                                 ↓
-                          Metadata + Cover
-                                 ↓
-                               EPUB
-                                 ↓
-                              AZW3 (Kindle)
+    Website → Scraper / Browser (Playwright) → Cleaner → JSON Archive
+                                                  ↓
+                                           Metadata + Cover
+                                                  ↓
+                                            EPUB Builder
+                                                  ↓
+                                           AZW3 (Kindle)
 
 The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
 
@@ -78,10 +78,11 @@ The JSON archive acts as the source of truth, so EPUB files can be rebuilt witho
   - lxml
   - ebooklib
   - python-slugify
+  - playwright
 
 Install Python packages with:
 
-    pip install requests beautifulsoup4 lxml ebooklib python-slugify
+    pip install requests beautifulsoup4 lxml ebooklib python-slugify playwright
 
 Check Calibre CLI with:
 
@@ -91,15 +92,21 @@ If needed on macOS, add Calibre to PATH with:
 
     export PATH="$PATH:/Applications/calibre.app/Contents/MacOS"
 
+Install Playwright browsers with:
+
+    playwright install
+
 ## Usage
 
-Run the script with:
+Run the tool with:
 
-    python main.py <novel_url>
+    python lngrab.py
+
+You will then be prompted to enter the novel URL and chapter range interactively.
 
 Example:
 
-    python main.py https://www.shmtranslations.com/ongoing/farming-life-in-another-world/
+    python lngrab.py
 
 Already downloaded chapters are skipped automatically.
 
@@ -129,8 +136,8 @@ The system is designed so new sources can be added later.
 
 Planned ideas:
 
+- Turn the project into a proper CLI tool (`lngrab` command)
 - Better metadata and cover download
-- Chapter range selection
 - Additional novel sites
 - GUI interface
 - Send-to-Kindle automation
