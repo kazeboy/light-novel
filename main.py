@@ -163,10 +163,14 @@ def main():
         print("\nFurigana mode:")
         print("  1. Normal EPUB")
         print("  2. Furigana on all kanji")
-        print("  3. Furigana on rare kanji")
+        print("  3. Furigana above JLPT N5")
+        print("  4. Furigana above JLPT N4")
+        print("  5. Furigana above JLPT N3")
+        print("  6. Furigana above JLPT N2")
+        print("  7. Furigana only for non-JLPT kanji")
 
         while True:
-            furigana_choice = input("Select furigana mode [1-3]: ").strip()
+            furigana_choice = input("Select furigana mode [1-7]: ").strip()
             if furigana_choice == "1":
                 furigana_mode = "none"
                 break
@@ -174,9 +178,21 @@ def main():
                 furigana_mode = "all"
                 break
             if furigana_choice == "3":
+                furigana_mode = "n4"
+                break
+            if furigana_choice == "4":
+                furigana_mode = "n3"
+                break
+            if furigana_choice == "5":
+                furigana_mode = "n2"
+                break
+            if furigana_choice == "6":
+                furigana_mode = "n1"
+                break
+            if furigana_choice == "7":
                 furigana_mode = "rare"
                 break
-            print("Invalid choice. Enter 1, 2, or 3.")
+            print("Invalid choice. Enter 1, 2, 3, 4, 5, 6, or 7.")
 
     folder = get_novel_folder_path_from_url(url)
     existing_info = get_existing_novel_info(folder)

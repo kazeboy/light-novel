@@ -1,17 +1,60 @@
 import re
 from janome.tokenizer import Tokenizer
+import os
 
 
 KANJI_RE = re.compile(r"[一-龯]")
 HIRAGANA_RE = re.compile(r"^[ぁ-ゖー]+$")
 
-# A lightweight starter set of common kanji for the initial "rare" mode.
-# This can be expanded later with a fuller joyo/JLPT list.
-COMMON_KANJI = set(
-    "日一国会人年大十二本中長出三同時政事自行社見月分後前生五間上東四今金九入学高円子外八六下来気小七山話女北午百書先名川千水半男西電校語土木聞食車何南万毎白天母火右読友左休父雨"
-)
-
 _TOKENIZER = Tokenizer()
+
+# Load JLPT kanji lists from data/jlpt_kanji/
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+JLPT_DIR = os.path.join(BASE_DIR, "data", "jlpt_kanji")
+
+
+def load_kanji_file(filename: str) -> set:
+    path = os.path.join(JLPT_DIR, filename)
+    kanji_set = set()
+    if not os.path.exists(path):
+        return kanji_set
+
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            for char in line:
+                if KANJI_RE.match(char):
+                    kanji_set.add(char)
+
+    return kanji_set
+
+
+JLPT_N5 = load_kanji_file("n5.txt")
+JLPT_N4 = load_kanji_file("n4.txt")
+JLPT_N3 = load_kanji_file("n3.txt")
+JLPT_N2 = load_kanji_file("n2.txt")
+JLPT_N1 = load_kanji_file("n1.txt")
+
+KNOWN_KANJI_BY_MODE = {
+    "n4": JLPT_N5,
+    "n3": JLPT_N5 | JLPT_N4,
+    "n2": JLPT_N5 | JLPT_N4 | JLPT_N3,
+    "n1": JLPT_N5 | JLPT_N4 | JLPT_N3 | JLPT_N2,
+    "rare": JLPT_N5 | JLPT_N4 | JLPT_N3 | JLPT_N2 | JLPT_N1,
+}
+
+
+def token_has_unknown_kanji(surface: str, mode: str) -> bool:
+    if mode == "all":
+        return True
+    known_set = KNOWN_KANJI_BY_MODE.get(mode, set())
+    for char in surface:
+        if KANJI_RE.match(char) and char not in known_set:
+            return True
+    return False
 
 
 def kata_to_hira(text: str) -> str:
@@ -30,17 +73,6 @@ def contains_kanji(text: str) -> bool:
     Used to decide whether a token is a candidate for furigana processing.
     """
     return bool(KANJI_RE.search(text))
-
-
-def is_common_kanji_token(text: str) -> bool:
-    """
-    Return True when every kanji in the token belongs to the starter common-kanji set.
-    Used by the initial rare-kanji mode to decide whether furigana should be skipped.
-    """
-    kanji_chars = [char for char in text if KANJI_RE.match(char)]
-    if not kanji_chars:
-        return True
-    return all(char in COMMON_KANJI for char in kanji_chars)
 
 
 def build_ruby(surface: str, reading: str) -> str:
@@ -75,10 +107,10 @@ def add_furigana_all(text: str) -> str:
     return "".join(parts)
 
 
-def add_furigana_rare(text: str) -> str:
+def add_furigana_by_level(text: str, mode: str) -> str:
     """
-    Add furigana ruby markup only to kanji-containing tokens that are outside the starter common-kanji set.
-    Used when the user selects the initial "rare kanji" furigana mode.
+    Add furigana ruby markup based on JLPT level mode.
+    Furigana is added when a token contains kanji not in the known set for that level.
     """
     parts = []
     for token in _TOKENIZER.tokenize(text):
@@ -90,9 +122,9 @@ def add_furigana_rare(text: str) -> str:
 
         if (
             contains_kanji(surface)
-            and not is_common_kanji_token(surface)
             and reading
             and reading != "*"
+            and token_has_unknown_kanji(surface, mode)
         ):
             hira = kata_to_hira(reading)
             parts.append(build_ruby(surface, hira))
@@ -105,12 +137,12 @@ def add_furigana_rare(text: str) -> str:
 def apply_furigana(text: str, mode: str = "none") -> str:
     """
     Apply the selected furigana mode to a block of Japanese text.
-    Supported modes are: none, all, and rare.
+    Supported modes are: none, all, n4, n3, n2, n1, rare.
     """
     if not text or mode == "none":
         return text
     if mode == "all":
         return add_furigana_all(text)
-    if mode == "rare":
-        return add_furigana_rare(text)
+    if mode in {"n4", "n3", "n2", "n1", "rare"}:
+        return add_furigana_by_level(text, mode)
     return text
