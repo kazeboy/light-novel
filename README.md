@@ -1,5 +1,10 @@
 # Light Novel Downloader & Ebook Builder
 
+## Status
+
+This project is under active development and is primarily designed for personal use and learning purposes.  
+Features and supported sites may change over time.
+
 A Python tool that downloads web novels and light novels from online translation sites, cleans the content, and builds EPUB and Kindle (AZW3) ebooks automatically.
 
 This project is designed as a learning project, but it is structured like a real content pipeline.
