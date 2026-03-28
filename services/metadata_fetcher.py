@@ -5,6 +5,10 @@ from bs4 import BeautifulSoup
 
 
 def derive_search_title(novel_title: str | None, novel_url: str) -> str:
+    """
+    Derive a clean search title from the scraped novel title or fall back to the URL slug.
+    Used before querying NovelUpdates for richer metadata.
+    """
     if (
         novel_title
         and novel_title.strip()
@@ -24,6 +28,10 @@ def derive_search_title(novel_title: str | None, novel_url: str) -> str:
 
 
 def resolve_metadata(search_title: str) -> dict:
+    """
+    Create a normalized metadata dictionary with default placeholder fields.
+    Used as a consistent structure before metadata is enriched from external sources.
+    """
     return {
         "title": search_title,
         "author": None,
@@ -41,6 +49,10 @@ def resolve_metadata(search_title: str) -> dict:
 
 
 def search_novelupdates_results(search_title: str, limit: int = 5) -> List[dict]:
+    """
+    Search NovelUpdates for matching series and return a small list of candidate results.
+    Used when a new novel is added so the user can choose the correct metadata source.
+    """
     search_url = f"https://www.novelupdates.com/series-finder/?sf=1&sh={quote_plus(search_title)}"
 
     with sync_playwright() as p:
@@ -85,6 +97,10 @@ def search_novelupdates_results(search_title: str, limit: int = 5) -> List[dict]
 
 
 def choose_novelupdates_result(results: List[dict]) -> str | None:
+    """
+    Let the user choose the correct NovelUpdates result when multiple matches are found.
+    Used interactively by main.py before fetching detailed metadata.
+    """
     if not results:
         return None
 
@@ -114,6 +130,10 @@ def choose_novelupdates_result(results: List[dict]) -> str | None:
 
 
 def fetch_novelupdates_metadata(series_url: str) -> dict:
+    """
+    Fetch detailed metadata from a NovelUpdates series page using Playwright and BeautifulSoup.
+    Used to enrich local metadata with author, alt titles, genre, rating, year, status, country, and cover.
+    """
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(

@@ -29,11 +29,19 @@ BAD_TEXT_PATTERNS = [
 
 
 def is_bad_text(text: str) -> bool:
+    """
+    Return True when a line of text matches known junk or navigation patterns.
+    Used by chapter-cleaning logic to skip links, prompts, and site-specific boilerplate.
+    """
     lower = text.lower()
     return any(pattern in lower for pattern in BAD_TEXT_PATTERNS)
 
 
 def clean_chapter_html(container) -> tuple[str, str]:
+    """
+    Clean a chapter content container and return both sanitized HTML and plain text.
+    Used by source scrapers before saving chapter JSON and building EPUB files.
+    """
     working = BeautifulSoup(str(container), "lxml")
 
     # Remove unwanted tags
