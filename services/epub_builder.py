@@ -4,6 +4,7 @@ from ebooklib import epub
 from slugify import slugify
 import subprocess
 from html import escape
+from services.furigana import apply_furigana
 
 
 def load_meta(folder: str) -> dict:
@@ -36,12 +37,12 @@ def load_chapter_files(folder: str) -> list[dict]:
     return chapters
 
 
-def build_cover_page() -> epub.EpubHtml:
+def build_cover_page(lang: str = "en") -> epub.EpubHtml:
     """
     Build a dedicated XHTML cover page for the EPUB using the embedded cover image.
     Used by the EPUB builder so readers open on a real cover page instead of metadata only.
     """
-    cover_page = epub.EpubHtml(title="Cover", file_name="cover.xhtml", lang="en")
+    cover_page = epub.EpubHtml(title="Cover", file_name="cover.xhtml", lang=lang)
     cover_page.content = """
     <html>
       <head><title>Cover</title></head>
@@ -53,7 +54,7 @@ def build_cover_page() -> epub.EpubHtml:
     return cover_page
 
 
-def build_info_page(meta: dict) -> epub.EpubHtml:
+def build_info_page(meta: dict, lang: str = "en") -> epub.EpubHtml:
     """
     Build an EPUB front-matter page that displays book information and enriched metadata.
     Used before the table of contents so title, author, genre, rating, and description are visible in the ebook.
@@ -103,7 +104,7 @@ def build_info_page(meta: dict) -> epub.EpubHtml:
     info_html = "".join(info_sections)
 
     info_page = epub.EpubHtml(
-        title="Book Information", file_name="book-info.xhtml", lang="en"
+        title="Book Information", file_name="book-info.xhtml", lang=lang
     )
     info_page.content = f"""
     <html>
@@ -116,7 +117,7 @@ def build_info_page(meta: dict) -> epub.EpubHtml:
     return info_page
 
 
-def build_epub_from_json(folder: str) -> str:
+def build_epub_from_json(folder: str, furigana_mode: str = "none") -> str:
     """
     Build an EPUB file from the local metadata, cover image, and chapter JSON archive.
     Called after downloads finish or in rebuild-only mode to generate the final ebook without re-scraping.
@@ -130,10 +131,13 @@ def build_epub_from_json(folder: str) -> str:
     author = meta.get("author", "Unknown")
     book_slug = slugify(title)
 
+    source_url = meta.get("source_url", "")
+    book_lang = "ja" if "ncode.syosetu.com" in source_url else "en"
+
     book = epub.EpubBook()
     book.set_identifier(book_slug)
     book.set_title(title)
-    book.set_language("en")
+    book.set_language(book_lang)
     book.add_author(author)
     description = meta.get("description")
     cover_path = meta.get("cover_path")
@@ -143,10 +147,10 @@ def build_epub_from_json(folder: str) -> str:
     if cover_path and os.path.exists(cover_path):
         with open(cover_path, "rb") as f:
             book.set_cover("cover.jpg", f.read(), create_page=False)
-        cover_page = build_cover_page()
+        cover_page = build_cover_page(lang=book_lang)
         book.add_item(cover_page)
 
-    info_page = build_info_page(meta)
+    info_page = build_info_page(meta, lang=book_lang)
     book.add_item(info_page)
 
     chapters = load_chapter_files(folder)
@@ -158,7 +162,15 @@ def build_epub_from_json(folder: str) -> str:
         chapter_html = (data.get("html") or "").strip()
         chapter_text = (data.get("text") or "").strip()
 
-        if not chapter_html:
+        if book_lang == "ja" and furigana_mode != "none" and chapter_text:
+            processed_text = apply_furigana(chapter_text, furigana_mode)
+            paragraphs = "".join(
+                f"<p>{paragraph.strip()}</p>"
+                for paragraph in processed_text.split("\n\n")
+                if paragraph.strip()
+            )
+            chapter_html = paragraphs or "<p>No content available.</p>"
+        elif not chapter_html:
             if chapter_text:
                 paragraphs = "".join(
                     f"<p>{escape(paragraph.strip())}</p>"
@@ -172,7 +184,7 @@ def build_epub_from_json(folder: str) -> str:
         chapter_file_name = f"chapter-{chapter_index:04d}.xhtml"
 
         chapter = epub.EpubHtml(
-            title=escape(chapter_title), file_name=chapter_file_name, lang="en"
+            title=escape(chapter_title), file_name=chapter_file_name, lang=book_lang
         )
 
         chapter.content = f"""
