@@ -3,9 +3,23 @@ import os
 import json
 from slugify import slugify
 from sources.registry import get_source_for_url
-from services.downloader import create_novel_folder, save_meta, save_chapter, chapter_file_exists, download_cover
+from services.downloader import (
+    create_novel_folder,
+    save_meta,
+    save_chapter,
+    chapter_file_exists,
+    download_cover,
+)
 from services.epub_builder import build_epub_from_json, convert_epub_to_azw3
-from services.metadata_fetcher import derive_search_title, resolve_metadata, search_novelupdates_results, choose_novelupdates_result, fetch_novelupdates_metadata
+from services.metadata_fetcher import (
+    derive_search_title,
+    resolve_metadata,
+    search_novelupdates_results,
+    choose_novelupdates_result,
+    fetch_novelupdates_metadata,
+)
+from urllib.parse import urlparse
+
 
 def parse_chapter_range(range_input: str, total_chapters: int):
     range_input = range_input.strip()
@@ -33,6 +47,14 @@ def parse_chapter_range(range_input: str, total_chapters: int):
 
 def get_novel_folder_path(novel_title: str) -> str:
     return os.path.join("output", slugify(novel_title))
+
+
+def get_novel_folder_path_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    slug = parsed.path.rstrip("/").split("/")[-1]
+    if slug.endswith(".html"):
+        slug = slug[:-5]
+    return os.path.join("output", slugify(slug))
 
 
 def get_existing_novel_info(folder: str) -> dict:
@@ -80,8 +102,8 @@ def get_existing_novel_info(folder: str) -> dict:
 def choose_existing_novel_action(existing_info: dict) -> str:
     meta = existing_info.get("meta") or {}
     print("\nExisting novel detected")
-    print(f"Title: {meta.get('title', 'Unknown')}" )
-    print(f"Author: {meta.get('author', 'Unknown')}" )
+    print(f"Title: {meta.get('title', 'Unknown')}")
+    print(f"Author: {meta.get('author', 'Unknown')}")
     print(f"Saved chapters: {existing_info.get('chapter_count', 0)}")
 
     min_index = existing_info.get("min_index")
@@ -106,8 +128,8 @@ def main():
     url = input("Novel URL: ").strip()
 
     if not url:
-       print("No URL provided.")
-       return
+        print("No URL provided.")
+        return
     source = get_source_for_url(url)
 
     if source is None:
@@ -116,22 +138,30 @@ def main():
 
     print(f"Source detected: {source.__class__.__name__}")
 
-    print("Fetching novel metadata...")
-    novel = source.get_novel_metadata(url)
-    print(f"Title: {novel.title}")
-    folder = get_novel_folder_path(novel.title)
+    folder = get_novel_folder_path_from_url(url)
     existing_info = get_existing_novel_info(folder)
     action = None
+    novel = None
+    fetched_metadata = None
 
     if existing_info["exists"]:
+        print(
+            "Skipping source metadata fetch because this novel already exists locally."
+        )
+        existing_meta = existing_info.get("meta") or {}
+        existing_title = existing_meta.get("title", "Unknown Title")
+        print(f"Title: {existing_title}")
         action = choose_existing_novel_action(existing_info)
         if action == "4":
             print("Cancelled.")
             return
+        novel_title = existing_title
+    else:
+        print("Fetching novel metadata...")
+        novel = source.get_novel_metadata(url)
+        print(f"Title: {novel.title}")
+        novel_title = novel.title
 
-    fetched_metadata = None
-
-    if not existing_info["exists"]:
         search_title = derive_search_title(novel.title, url)
         print(f"Search title: {search_title}")
         resolved_metadata = resolve_metadata(search_title)
@@ -150,22 +180,24 @@ def main():
                 print(f"Fetched cover URL: {fetched_metadata['cover_url']}")
         else:
             print("No NovelUpdates matches found.")
+
+    chapters = []
+    if action != "3":
+        print("Fetching chapter list...")
+        chapters = source.get_chapter_list(url)
+        print(f"Total chapters found: {len(chapters)}")
+
+        if not chapters:
+            print("No chapters found.")
+            return
     else:
-        print("Skipping metadata fetch because this novel already exists locally.")
+        print("Skipping chapter list fetch (rebuild only mode).")
 
-    print("Fetching chapter list...")
-    chapters = source.get_chapter_list(url)
-    print(f"Total chapters found: {len(chapters)}")
-
-    if not chapters and action != "3":
-        print("No chapters found.")
-        return
-
-    folder = create_novel_folder(novel.title)
+    folder = create_novel_folder(novel_title)
     print(f"Saving to folder: {folder}")
 
     meta = {
-        "title": novel.title,
+        "title": novel_title,
         "source_url": url,
         "total_chapters": len(chapters),
     }
@@ -193,7 +225,9 @@ def main():
     else:
         if action == "1":
             existing_max = existing_info.get("max_index") or 0
-            start_ch = existing_max + 1 if existing_max < len(chapters) else len(chapters) + 1
+            start_ch = (
+                existing_max + 1 if existing_max < len(chapters) else len(chapters) + 1
+            )
             end_ch = len(chapters)
             print(f"Processing missing/new chapters from {start_ch} to {end_ch}...")
         else:
