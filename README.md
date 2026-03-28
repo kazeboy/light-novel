@@ -28,6 +28,7 @@ Current features:
 
 ## Project Structure
 
+```
 light-novel/
 ├── main.py                 # Main program
 ├── config.py               # Configuration placeholder
@@ -62,9 +63,11 @@ light-novel/
 │       ├── <source-slug>.epub
 │       └── <source-slug>.azw3
 └── temp/                   # Temporary files
+```
 
 ## How It Works
 
+```
 Pipeline:
 
 Website → Scraper / Browser (Playwright when needed) → Cleaner → JSON Archive
@@ -76,6 +79,7 @@ Website → Scraper / Browser (Playwright when needed) → Cleaner → JSON Arch
                                               EPUB Builder → Furigana Processor (optional)
                                                               ↓
                                                          AZW3 (Kindle)
+```
 
 When working with Japanese novels, the EPUB builder can optionally add furigana (reading aid) above kanji. Furigana can be generated for all kanji or filtered based on JLPT levels (for example, only show furigana for kanji above JLPT N3). This allows the same novel to be rebuilt multiple times for different reading levels without re-downloading chapters.
 
