@@ -36,7 +36,9 @@ Current features:
     │   ├── base.py
     │   ├── registry.py
     │   ├── shmtranslations.py
-    │   └── novelupdates.py
+    │   ├── syosetu.py
+    │   ├── novelupdates.py
+    │   └── mangaupdates.py
     ├── services/               # Core services
     │   ├── downloader.py
     │   ├── normalizer.py
@@ -58,13 +60,15 @@ Current features:
 
 Pipeline:
 
-    Website → Scraper / Browser (Playwright) → Cleaner → JSON Archive
-                                                  ↓
-                                           Metadata + Cover
-                                                  ↓
-                                            EPUB Builder
-                                                  ↓
-                                           AZW3 (Kindle)
+    Website → Scraper / Browser (Playwright when needed) → Cleaner → JSON Archive
+                                                                  ↓
+                                                    Metadata (NovelUpdates → MangaUpdates fallback)
+                                                                  ↓
+                                                           Cover Download
+                                                                  ↓
+                                                            EPUB Builder
+                                                                  ↓
+                                                           AZW3 (Kindle)
 
 The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
 
@@ -76,6 +80,7 @@ Metadata is fetched using a fallback system:
 2. If NovelUpdates is skipped or no result is found, it automatically searches MangaUpdates.
 3. The first successful metadata source is used.
 4. Metadata includes title, author, description, alternative titles, genre, year, status, and cover image when available.
+5. The folder name and file names are based on the source URL slug, not the novel title, to avoid filesystem and encoding issues.
 
 This fallback system improves metadata reliability and cover availability across different novels.
 
@@ -134,12 +139,26 @@ For each novel, the script creates:
 
 The folder name is based on the source website URL (slug), and the EPUB/AZW3 filenames are also based on the same slug for consistency and filesystem-safe naming. The official book title and other metadata are embedded inside the EPUB/AZW3 metadata instead.
 
+## Japanese Text Support
+
+This project supports Japanese web novels (for example from syosetu.com).
+
+To ensure Japanese characters display correctly on macOS Books and Kindle:
+
+- All JSON files are saved using UTF-8 encoding.
+- EPUB files are generated with UTF-8 HTML and `<html lang="ja">` when the source is Japanese.
+- The folder name and EPUB filename are based on the source URL slug instead of the Japanese title to avoid encoding and filesystem issues.
+- The original Japanese title and author are stored in metadata and embedded into the EPUB file.
+
+This allows reading Japanese novels directly on Kindle or Apple Books while keeping proper metadata and cover images.
+
 ## Supported Sources
 
 Current support:
 
 - shmtranslations.com (chapter source)
-- novelfull.com (chapter source)
+- novelfull.com (chapter source - Playwright)
+- syosetu.com (Japanese raw novels)
 - novelupdates.com (primary metadata source)
 - mangaupdates.com (fallback metadata source)
 
