@@ -10,13 +10,26 @@ import atexit
 
 
 class NovelFullSource(BaseSource):
+    """
+    Source scraper for NovelFull using Playwright for protected pages and dynamic content.
+    Used by the source registry when a user provides a novelfull.com URL.
+    """
+
     def __init__(self):
+        """
+        Initialize the shared Playwright session state used for persistent chapter fetching.
+        Called when the NovelFull source is created by the registry.
+        """
         self._playwright = None
         self._browser = None
         self._context = None
         atexit.register(self.close)
 
     def _ensure_context(self):
+        """
+        Create and reuse a persistent Playwright browser context for chapter list and chapter content fetching.
+        Used internally to avoid reopening a browser for every NovelFull chapter request.
+        """
         if self._context is not None:
             return self._context
 
@@ -30,6 +43,10 @@ class NovelFullSource(BaseSource):
         return self._context
 
     def _fetch_html_persistent(self, url: str, wait_selector: str | None = None) -> str:
+        """
+        Fetch HTML using the persistent Playwright browser context.
+        Used for chapter list and chapter content where repeated requests need to stay fast.
+        """
         context = self._ensure_context()
         page = context.new_page()
         try:
@@ -46,6 +63,10 @@ class NovelFullSource(BaseSource):
             page.close()
 
     def _fetch_html_once(self, url: str, wait_selector: str | None = None) -> str:
+        """
+        Fetch HTML using a short-lived Playwright session for one-off requests.
+        Used for novel metadata so the temporary browser is closed before NovelUpdates metadata lookup runs.
+        """
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -69,6 +90,10 @@ class NovelFullSource(BaseSource):
                 browser.close()
 
     def close(self):
+        """
+        Close the persistent Playwright context, browser, and engine if they are still open.
+        Used at process shutdown or when the NovelFull source no longer needs its shared browser session.
+        """
         if self._context is not None:
             self._context.close()
             self._context = None
@@ -80,15 +105,27 @@ class NovelFullSource(BaseSource):
             self._playwright = None
 
     def matches(self, url: str) -> bool:
+        """
+        Return True when the given URL belongs to NovelFull.
+        Used by the source registry to route novelfull.com links to this scraper.
+        """
         return "novelfull.com" in url
 
     def _normalize_chapter_url(self, base_url: str, href: str) -> str:
+        """
+        Normalize a chapter URL so duplicate entries with small URL differences collapse to one canonical value.
+        Used while building the chapter list to reduce duplicate chapters from NovelFull.
+        """
         full_url = urljoin(base_url, href)
         parsed = urlparse(full_url)
         normalized_path = parsed.path.rstrip("/") or "/"
         return urlunparse((parsed.scheme, parsed.netloc, normalized_path, "", "", ""))
 
     def get_novel_metadata(self, url: str) -> Novel:
+        """
+        Fetch the basic novel metadata from a NovelFull series page.
+        Called early in the workflow before NovelUpdates enrichment and before creating the output folder.
+        """
         html = self._fetch_html_once(url, "h3.title")
 
         soup = BeautifulSoup(html, "lxml")
@@ -123,6 +160,10 @@ class NovelFullSource(BaseSource):
         )
 
     def get_chapter_list(self, url: str) -> List[ChapterRef]:
+        """
+        Fetch and deduplicate the full chapter list from NovelFull, including paginated chapter index pages.
+        Used by main.py to determine available chapters and decide which ones to download.
+        """
         chapter_refs = []
         seen_urls = set()
         seen_keys = set()
@@ -178,6 +219,10 @@ class NovelFullSource(BaseSource):
         return chapter_refs
 
     def get_chapter_content(self, chapter_url: str) -> ChapterContent:
+        """
+        Fetch and clean the full content of a single NovelFull chapter page.
+        Used by the downloader loop before saving chapter JSON and rebuilding ebooks.
+        """
         html = self._fetch_html_persistent(chapter_url, "#chapter-content")
 
         soup = BeautifulSoup(html, "lxml")

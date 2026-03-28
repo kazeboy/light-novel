@@ -153,3 +153,11 @@ Please support original authors and translators by visiting their websites.
 ## Author
 
 Personal learning project by Rooz.
+
+## Architecture Diagram
+
+Below is a high-level overview of how the system works internally.
+
+![Architecture Diagram](docs/architecture.png)
+
+This diagram shows the flow from source websites → scrapers → cleaning → JSON archive → EPUB/AZW3 builder.

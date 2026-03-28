@@ -7,12 +7,20 @@ from html import escape
 
 
 def load_meta(folder: str) -> dict:
+    """
+    Load the saved metadata dictionary from meta.json in a novel output folder.
+    Used by the EPUB builder and rebuild flow as the local source of truth for book metadata.
+    """
     path = os.path.join(folder, "meta.json")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def load_chapter_files(folder: str) -> list[dict]:
+    """
+    Load all saved chapter JSON files from the local archive and sort them by chapter index.
+    Used by the EPUB builder to reconstruct the book without re-downloading chapters.
+    """
     chapters_folder = os.path.join(folder, "chapters")
     files = sorted(f for f in os.listdir(chapters_folder) if f.endswith(".json"))
 
@@ -29,6 +37,10 @@ def load_chapter_files(folder: str) -> list[dict]:
 
 
 def build_cover_page() -> epub.EpubHtml:
+    """
+    Build a dedicated XHTML cover page for the EPUB using the embedded cover image.
+    Used by the EPUB builder so readers open on a real cover page instead of metadata only.
+    """
     cover_page = epub.EpubHtml(title="Cover", file_name="cover.xhtml", lang="en")
     cover_page.content = """
     <html>
@@ -41,8 +53,11 @@ def build_cover_page() -> epub.EpubHtml:
     return cover_page
 
 
-# Helper function to build book info page
 def build_info_page(meta: dict) -> epub.EpubHtml:
+    """
+    Build an EPUB front-matter page that displays book information and enriched metadata.
+    Used before the table of contents so title, author, genre, rating, and description are visible in the ebook.
+    """
     title = meta.get("title", "Unknown Title")
     alt_title = (
         meta.get("alt_title")
@@ -102,6 +117,10 @@ def build_info_page(meta: dict) -> epub.EpubHtml:
 
 
 def build_epub_from_json(folder: str) -> str:
+    """
+    Build an EPUB file from the local metadata, cover image, and chapter JSON archive.
+    Called after downloads finish or in rebuild-only mode to generate the final ebook without re-scraping.
+    """
     meta_path = os.path.join(folder, "meta.json")
 
     with open(meta_path, "r", encoding="utf-8") as f:
@@ -188,6 +207,10 @@ def build_epub_from_json(folder: str) -> str:
 
 
 def convert_epub_to_azw3(epub_path: str) -> str:
+    """
+    Convert a generated EPUB file into AZW3 format using Calibre's ebook-convert tool.
+    Used after EPUB creation so the book can be read on Kindle devices.
+    """
     azw3_path = epub_path.rsplit(".", 1)[0] + ".azw3"
 
     result = subprocess.run(

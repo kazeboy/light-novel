@@ -5,6 +5,11 @@ from sources.novelupdates import NovelUpdatesSource
 from sources.novelfull import NovelFullSource
 
 
+# Source Registry
+# This file maintains the list of all supported novel sources.
+# When a user provides a URL, the system checks each source to see
+# which one can handle the URL and routes the request to the correct scraper.
+
 SOURCES: List[BaseSource] = [
     ShmTranslationsSource(),
     NovelFullSource(),
@@ -13,6 +18,10 @@ SOURCES: List[BaseSource] = [
 
 
 def get_source_for_url(url: str) -> BaseSource:
+    """
+    Return the appropriate Source implementation for a given URL.
+    Called by main.py to determine which scraper should handle the novel.
+    """
     for source in SOURCES:
         if source.matches(url):
             return source
