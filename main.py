@@ -4,7 +4,6 @@ import json
 from slugify import slugify
 from sources.registry import get_source_for_url
 from services.downloader import (
-    create_novel_folder,
     save_meta,
     save_chapter,
     chapter_file_exists,
@@ -206,7 +205,8 @@ def main():
     else:
         print("Skipping chapter list fetch (rebuild only mode).")
 
-    folder = create_novel_folder(novel_title)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(os.path.join(folder, "chapters"), exist_ok=True)
     print(f"Saving to folder: {folder}")
 
     meta = {
