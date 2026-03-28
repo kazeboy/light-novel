@@ -13,15 +13,16 @@ from services.downloader import (
 from services.epub_builder import build_epub_from_json, convert_epub_to_azw3
 from services.metadata_fetcher import (
     derive_search_title,
-    resolve_metadata,
-    search_novelupdates_results,
-    choose_novelupdates_result,
-    fetch_novelupdates_metadata,
+    fetch_metadata_with_fallbacks,
 )
 from urllib.parse import urlparse
 
 
 def parse_chapter_range(range_input: str, total_chapters: int):
+    """
+    Parse user input such as `50`, `15-55`, `500-`, or `-100` into a start/end chapter index range.
+    Used by main() when the user chooses a custom download range.
+    """
     range_input = range_input.strip()
 
     if not range_input:
@@ -46,10 +47,18 @@ def parse_chapter_range(range_input: str, total_chapters: int):
 
 
 def get_novel_folder_path(novel_title: str) -> str:
+    """
+    Build the output folder path from a novel title using a slugified name.
+    Kept as a helper for title-based folder paths when needed elsewhere in the project.
+    """
     return os.path.join("output", slugify(novel_title))
 
 
 def get_novel_folder_path_from_url(url: str) -> str:
+    """
+    Build the expected output folder path directly from the source URL slug.
+    Used to detect existing novels before fetching source metadata again.
+    """
     parsed = urlparse(url)
     slug = parsed.path.rstrip("/").split("/")[-1]
     if slug.endswith(".html"):
@@ -58,6 +67,10 @@ def get_novel_folder_path_from_url(url: str) -> str:
 
 
 def get_existing_novel_info(folder: str) -> dict:
+    """
+    Inspect an existing novel folder and return stored metadata plus chapter index statistics.
+    Used by main() to decide whether a novel already exists locally and what actions are available.
+    """
     info = {
         "exists": False,
         "meta": None,
@@ -100,6 +113,10 @@ def get_existing_novel_info(folder: str) -> dict:
 
 
 def choose_existing_novel_action(existing_info: dict) -> str:
+    """
+    Display the existing-novel action menu and return the user's choice.
+    Used when a local archive already exists so the user can update, rebuild, or cancel.
+    """
     meta = existing_info.get("meta") or {}
     print("\nExisting novel detected")
     print(f"Title: {meta.get('title', 'Unknown')}")
@@ -125,6 +142,10 @@ def choose_existing_novel_action(existing_info: dict) -> str:
 
 
 def main():
+    """
+    Orchestrate the full novel workflow from URL input to metadata enrichment, chapter download, EPUB build, and AZW3 conversion.
+    This is the main entry point used by lngrab.py when the application is run interactively.
+    """
     url = input("Novel URL: ").strip()
 
     if not url:
@@ -164,22 +185,14 @@ def main():
 
         search_title = derive_search_title(novel.title, url)
         print(f"Search title: {search_title}")
-        resolved_metadata = resolve_metadata(search_title)
-        print(f"Metadata title: {resolved_metadata['title']}")
-        nu_results = search_novelupdates_results(search_title)
-        print(f"NovelUpdates results found: {len(nu_results)}")
-
-        if nu_results:
-            nu_result = choose_novelupdates_result(nu_results)
-            print(f"NovelUpdates chosen result: {nu_result}")
-
-            if nu_result:
-                fetched_metadata = fetch_novelupdates_metadata(nu_result)
-                print(f"Fetched title: {fetched_metadata['title']}")
-                print(f"Fetched author: {fetched_metadata['author']}")
-                print(f"Fetched cover URL: {fetched_metadata['cover_url']}")
-        else:
-            print("No NovelUpdates matches found.")
+        fetched_metadata = fetch_metadata_with_fallbacks(search_title)
+        print(f"Metadata source: {fetched_metadata.get('metadata_source')}")
+        if fetched_metadata.get("title"):
+            print(f"Fetched title: {fetched_metadata['title']}")
+        if fetched_metadata.get("author"):
+            print(f"Fetched author: {fetched_metadata['author']}")
+        if fetched_metadata.get("cover_url"):
+            print(f"Fetched cover URL: {fetched_metadata['cover_url']}")
 
     chapters = []
     if action != "3":

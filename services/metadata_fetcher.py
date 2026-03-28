@@ -96,10 +96,10 @@ def search_novelupdates_results(search_title: str, limit: int = 5) -> List[dict]
         return results
 
 
-def choose_novelupdates_result(results: List[dict]) -> str | None:
+def choose_metadata_result(source_name: str, results: List[dict]) -> str | None:
     """
-    Let the user choose the correct NovelUpdates result when multiple matches are found.
-    Used interactively by main.py before fetching detailed metadata.
+    Let the user choose a metadata result from a specific source when multiple matches are found.
+    Used by the metadata fallback flow for NovelUpdates and MangaUpdates.
     """
     if not results:
         return None
@@ -107,7 +107,7 @@ def choose_novelupdates_result(results: List[dict]) -> str | None:
     if len(results) == 1:
         return results[0]["url"]
 
-    print("\nMultiple NovelUpdates matches found:")
+    print(f"\nMultiple {source_name} matches found:")
     for item in results:
         print(f"  {item['index']}. {item['title']}")
         print(f"     {item['url']}")
@@ -127,6 +127,14 @@ def choose_novelupdates_result(results: List[dict]) -> str | None:
         print(
             "Invalid choice. Please enter one of the listed numbers, or press Enter to skip."
         )
+
+
+def choose_novelupdates_result(results: List[dict]) -> str | None:
+    """
+    Let the user choose the correct NovelUpdates result when multiple matches are found.
+    Used interactively by main.py before fetching detailed metadata.
+    """
+    return choose_metadata_result("NovelUpdates", results)
 
 
 def fetch_novelupdates_metadata(series_url: str) -> dict:
@@ -245,3 +253,189 @@ def fetch_novelupdates_metadata(series_url: str) -> dict:
         "metadata_source": "novelupdates",
         "metadata_url": series_url,
     }
+
+
+# --- Fallbacks: MangaUpdates ---
+
+
+def search_mangaupdates_results(search_title: str, limit: int = 5) -> List[dict]:
+    """
+    Search MangaUpdates for matching series and return a small list of candidate results.
+    Used as a fallback metadata source when NovelUpdates fails.
+    """
+    search_url = (
+        f"https://www.mangaupdates.com/search.html?search={quote_plus(search_title)}"
+    )
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1440, "height": 900},
+            locale="en-US",
+        )
+        page = context.new_page()
+        page.goto(search_url, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(4000)
+
+        html = page.content()
+        context.close()
+        browser.close()
+
+    soup = BeautifulSoup(html, "lxml")
+    results: List[dict] = []
+    seen_urls = set()
+
+    for link in soup.select("a[title='Click for Series Info']"):
+        title = link.get_text(" ", strip=True)
+        href = link.get("href")
+
+        if not title or not href:
+            continue
+
+        if href.startswith("/"):
+            href = "https://www.mangaupdates.com" + href
+
+        if href in seen_urls:
+            continue
+        seen_urls.add(href)
+
+        results.append(
+            {
+                "index": len(results) + 1,
+                "title": title,
+                "url": href,
+            }
+        )
+
+        if len(results) >= limit:
+            break
+
+    return results
+
+
+def fetch_mangaupdates_metadata(series_url: str) -> dict:
+    """
+    Fetch metadata from a MangaUpdates series page.
+    Used as a fallback metadata source.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1440, "height": 900},
+            locale="en-US",
+        )
+        page = context.new_page()
+        page.goto(series_url, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(3000)
+
+        html = page.content()
+        context.close()
+        browser.close()
+
+    soup = BeautifulSoup(html, "lxml")
+
+    description = None
+    alt_title = None
+    genre = None
+    status = None
+    year = None
+
+    # Description
+    desc_container = soup.select_one("div[data-cy='info-box-description']")
+    if desc_container:
+        description = desc_container.get_text(" ", strip=True)
+
+    # Alternative titles (Associated Names)
+    alt_container = soup.select_one("div[data-cy='info-box-associated']")
+    if alt_container:
+        alt_lines = [
+            line.strip()
+            for line in alt_container.get_text("\n", strip=True).splitlines()
+            if line.strip()
+        ]
+        if alt_lines:
+            alt_title = " | ".join(alt_lines)
+
+    # Genres
+    genre_container = soup.select_one("div[data-cy='info-box-genres']")
+    if genre_container:
+        genre_links = genre_container.select("a")
+        genre_values = [
+            tag.get_text(" ", strip=True)
+            for tag in genre_links
+            if tag.get_text(" ", strip=True)
+        ]
+        if genre_values:
+            genre = ", ".join(genre_values)
+
+    # Status
+    status_container = soup.select_one("div[data-cy='info-box-status']")
+    if status_container:
+        status = status_container.get_text(" ", strip=True)
+
+    # Year
+    year_container = soup.select_one("div[data-cy='info-box-year']")
+    if year_container:
+        year = year_container.get_text(" ", strip=True)
+
+    # Cover image
+    cover_url = None
+    cover_tag = soup.select_one("div[data-cy='info-box-image'] img")
+    if not cover_tag:
+        cover_tag = soup.select_one("img[data-img]")
+
+    if cover_tag:
+        cover_url = (
+            cover_tag.get("src") or cover_tag.get("data-src") or cover_tag.get("srcset")
+        )
+
+        if cover_url and "," in cover_url:
+            cover_url = cover_url.split(",")[0].strip().split(" ")[0]
+
+    # Author
+    author_container = soup.select_one("div[data-cy='info-box-authors'] a")
+    if author_container:
+        author = author_container.get_text(" ", strip=True)
+    else:
+        author = None
+
+    return {
+        "author": author,
+        "description": description,
+        "cover_url": cover_url,
+        "alt_title": alt_title,
+        "genre": genre,
+        "status": status,
+        "year": year,
+        "metadata_source": "mangaupdates",
+        "metadata_url": series_url,
+    }
+
+
+def fetch_metadata_with_fallbacks(search_title: str) -> dict:
+    """
+    Try fetching metadata from NovelUpdates, then MangaUpdates.
+    Returns the first successful metadata result, or the base metadata if nothing is found.
+    """
+    base_meta = resolve_metadata(search_title)
+
+    # Try NovelUpdates
+    nu_results = search_novelupdates_results(search_title)
+    nu_url = choose_metadata_result("NovelUpdates", nu_results)
+    if nu_url:
+        nu_meta = fetch_novelupdates_metadata(nu_url)
+        base_meta.update({k: v for k, v in nu_meta.items() if v})
+        return base_meta
+
+    # Try MangaUpdates
+    mu_results = search_mangaupdates_results(search_title)
+    mu_url = choose_metadata_result("MangaUpdates", mu_results)
+    if mu_url:
+        mu_meta = fetch_mangaupdates_metadata(mu_url)
+        base_meta.update({k: v for k, v in mu_meta.items() if v})
+        return base_meta
+
+    print("No metadata found in NovelUpdates or MangaUpdates.")
+    return base_meta

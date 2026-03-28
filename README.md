@@ -9,7 +9,7 @@ This project is designed as a learning project, but it is structured like a real
 Current features:
 
 - Detect supported source websites
-- Fetch novel metadata (title, author, description, alternative titles, genre, rating, year, status, country of origin)
+- Fetch novel metadata (title, author, description, alternative titles, genre, rating, year, status, country of origin) with fallback from NovelUpdates to MangaUpdates
 - Download cover image
 - Fetch chapter lists (with duplicate chapter detection and removal)
 - Download chapters using persistent browser sessions when needed (Playwright for protected sites)
@@ -67,6 +67,17 @@ Pipeline:
                                            AZW3 (Kindle)
 
 The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
+
+### Metadata Fetching
+
+Metadata is fetched using a fallback system:
+
+1. The tool first searches NovelUpdates and lets the user select a result.
+2. If NovelUpdates is skipped or no result is found, it automatically searches MangaUpdates.
+3. The first successful metadata source is used.
+4. Metadata includes title, author, description, alternative titles, genre, year, status, and cover image when available.
+
+This fallback system improves metadata reliability and cover availability across different novels.
 
 ## Requirements
 
@@ -129,7 +140,8 @@ Current support:
 
 - shmtranslations.com (chapter source)
 - novelfull.com (chapter source)
-- novelupdates.com (metadata source)
+- novelupdates.com (primary metadata source)
+- mangaupdates.com (fallback metadata source)
 
 The system is designed so new sources can be added easily via the source registry and scraper interface.
 
