@@ -19,58 +19,65 @@ Current features:
 - Build EPUB from the local JSON archive
 - Embed cover and full metadata into EPUB (including custom info page)
 - Convert EPUB to AZW3 for Kindle
+- Japanese text processing with optional furigana
+- JLPT-based kanji filtering (N5 → N1 and non-JLPT kanji modes)
+- Rebuild EPUB/AZW3 with different furigana levels without re-downloading chapters
 - Resume downloads safely
 - Retry failed requests
 - Add delays between requests to avoid hammering websites
 
 ## Project Structure
 
-    light-novel/
-    ├── main.py                 # Main program
-    ├── config.py               # Configuration placeholder
-    ├── README.md
-    ├── .gitignore
-    ├── models/                 # Data models
-    │   └── schemas.py
-    ├── sources/                # Website scrapers
-    │   ├── base.py
-    │   ├── registry.py
-    │   ├── shmtranslations.py
-    │   ├── syosetu.py
-    │   ├── novelupdates.py
-    │   └── mangaupdates.py
-    ├── services/               # Core services
-    │   ├── downloader.py
-    │   ├── normalizer.py
-    │   ├── epub_builder.py
-    │   └── ordering.py
-    ├── output/                 # Downloaded novels
-    │   └── <source-slug>/      # Folder name based on source URL
-    │       ├── meta.json
-    │       ├── cover.jpg
-    │       ├── chapters/
-    │       │   ├── 0001.json
-    │       │   ├── 0002.json
-    │       │   └── ...
-    │       ├── <source-slug>.epub
-    │       └── <source-slug>.azw3
-    └── temp/                   # Temporary files
+light-novel/
+├── main.py                 # Main program
+├── config.py               # Configuration placeholder
+├── README.md
+├── .gitignore
+├── data/
+│   └── jlpt_kanji/         # JLPT kanji lists (N5–N1)
+├── models/                 # Data models
+│   └── schemas.py
+├── sources/                # Website scrapers
+│   ├── base.py
+│   ├── registry.py
+│   ├── shmtranslations.py
+│   ├── syosetu.py
+│   ├── novelupdates.py
+│   └── mangaupdates.py
+├── services/               # Core services
+│   ├── downloader.py
+│   ├── normalizer.py
+│   ├── epub_builder.py
+│   ├── ordering.py
+│   ├── furigana.py         # Furigana generator and JLPT kanji filtering
+│   └── metadata_fetcher.py
+├── output/                 # Downloaded novels
+│   └── <source-slug>/      # Folder name based on source URL
+│       ├── meta.json
+│       ├── cover.jpg
+│       ├── chapters/
+│       │   ├── 0001.json
+│       │   ├── 0002.json
+│       │   └── ...
+│       ├── <source-slug>.epub
+│       └── <source-slug>.azw3
+└── temp/                   # Temporary files
 
 ## How It Works
 
 Pipeline:
 
-    Website → Scraper / Browser (Playwright when needed) → Cleaner → JSON Archive
-                                                                  ↓
-                                                    Metadata (NovelUpdates → MangaUpdates fallback)
-                                                                  ↓
-                                                           Cover Download
-                                                                  ↓
-                                                            EPUB Builder
-                                                                  ↓
-                                                           AZW3 (Kindle)
+Website → Scraper / Browser (Playwright when needed) → Cleaner → JSON Archive
+                                                              ↓
+                                                Metadata (NovelUpdates → MangaUpdates fallback)
+                                                              ↓
+                                                         Cover Download
+                                                              ↓
+                                              EPUB Builder → Furigana Processor (optional)
+                                                              ↓
+                                                         AZW3 (Kindle)
 
-The JSON archive acts as the source of truth, so EPUB files can be rebuilt without re-downloading chapters.
+When working with Japanese novels, the EPUB builder can optionally add furigana (reading aid) above kanji. Furigana can be generated for all kanji or filtered based on JLPT levels (for example, only show furigana for kanji above JLPT N3). This allows the same novel to be rebuilt multiple times for different reading levels without re-downloading chapters.
 
 ### Metadata Fetching
 
@@ -95,10 +102,11 @@ This fallback system improves metadata reliability and cover availability across
   - ebooklib
   - python-slugify
   - playwright
+  - janome
 
 Install Python packages with:
 
-    pip install requests beautifulsoup4 lxml ebooklib python-slugify playwright
+    pip install requests beautifulsoup4 lxml ebooklib python-slugify playwright janome
 
 Check Calibre CLI with:
 
@@ -126,6 +134,22 @@ Example:
 
 Already downloaded chapters are skipped automatically.
 
+### Furigana and JLPT Mode (Japanese Novels)
+
+When building EPUB files for Japanese novels, the tool can generate furigana automatically.
+
+You will be prompted to choose a furigana mode:
+
+1. No furigana
+2. Furigana for all kanji
+3. Furigana above JLPT N5
+4. Furigana above JLPT N4
+5. Furigana above JLPT N3
+6. Furigana above JLPT N2
+7. Furigana for non-JLPT kanji only
+
+This allows you to create graded reading material depending on your Japanese level.
+
 ## Output
 
 For each novel, the script creates:
@@ -151,6 +175,8 @@ To ensure Japanese characters display correctly on macOS Books and Kindle:
 - The original Japanese title and author are stored in metadata and embedded into the EPUB file.
 
 This allows reading Japanese novels directly on Kindle or Apple Books while keeping proper metadata and cover images.
+
+JLPT kanji lists are used to control furigana display. The kanji lists are sourced from the Kanji Tools project: https://github.com/kanjitools/kanji
 
 ## Supported Sources
 
