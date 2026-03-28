@@ -5,7 +5,7 @@ from slugify import slugify
 import time
 
 
-def fetch_page(url: str, retries: int = 3, delay: float = 2.0) -> str:
+def fetch_page(url: str, retries: int = 3, delay: float = 0.2) -> str:
     """
     Fetch a web page using requests with retry logic, delay, and a browser-like user agent.
     Used by metadata and source scrapers when a site can be accessed without Playwright.
@@ -29,7 +29,7 @@ def fetch_page(url: str, retries: int = 3, delay: float = 2.0) -> str:
             print(e)
 
             if attempt < retries - 1:
-                time.sleep(0.1)
+                time.sleep(2)
             else:
                 raise
 
