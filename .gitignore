@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
 
 # Virtual environment
 .venv/
@@ -14,6 +17,9 @@ venv/
 # Output files (generated books & chapters)
 output/*
 temp/*
+*.epub
+*.azw3
+*.log
 
 # Keep folders but not contents
 !output/.gitkeep
@@ -21,3 +27,4 @@ temp/*
 
 # Environment files
 .env
+.env.*
