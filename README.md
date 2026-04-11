@@ -1,8 +1,19 @@
 # Light Novel Downloader & Ebook Builder
 
-A Python tool that downloads web novels and light novels from online translation sites, cleans the content, and builds EPUB and Kindle (AZW3) ebooks automatically.
+A Python tool that downloads web novels and light novels from online translation sites, cleans the content, and builds EPUB and Kindle (AZW3) ebooks automatically. Includes Japanese JLPT kanji level support for graded reading practice.
 
 This project is designed as a learning project, but it is structured like a real content pipeline.
+
+## Working with Claude
+
+Context files for Claude-assisted development:
+
+- [`CLAUDE.md`](CLAUDE.md) — Project brief, hard rules, quick reference (start here)
+- [`context/architecture.md`](context/architecture.md) — Pipeline, data flow, AI integration plan
+- [`context/conventions.md`](context/conventions.md) — Python naming, docstring, and code conventions
+- [`context/product.md`](context/product.md) — Product goals, scope, and decisions
+- [`skills/`](skills/) — Reusable Claude procedures (add-source, debug-scraper, add-jlpt-feature)
+- [`prompts/`](prompts/) — Copy-paste prompt templates for common tasks
 
 ## Status
 
