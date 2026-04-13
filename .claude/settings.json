@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.venv/**)",
+      "Read(venv/**)",
+      "Read(__pycache__/**)",
+      "Read(*.pyc)",
+      "Read(*.pyo)",
+      "Read(*.pyd)",
+      "Read(*.egg-info/**)",
+      "Read(dist/**)",
+      "Read(build/**)",
+      "Read(logs/**)",
+      "Read(tmp/**)",
+      "Read(temp/**)",
+      "Read(.git/**)",
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(*.pem)",
+      "Read(*.key)",
+      "Read(secrets/**)",
+      "Read(.vscode/**)",
+      "Read(.idea/**)",
+      "Read(output/**)",
+      "Read(data/jlpt_kanji/**)",
+      "Read(*.epub)",
+      "Read(*.azw3)",
+      "Read(*.mobi)"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # CLAUDE.md
 > Keep this file under 200 lines. It's loaded on every message — only put essentials here.
-> For deeper context, point to the context/ folder below.
+> Detailed context is imported below and loaded automatically at session start.
 
 ---
 
@@ -9,6 +9,14 @@
 **Project:** light-novel — Python CLI tool that scrapes web novels and builds EPUB/AZW3 ebooks with Japanese JLPT study support
 **Stack:** Python 3.10+ · BeautifulSoup4 · Playwright · EbookLib · Janome · Calibre CLI
 **Owner:** Kazeboy
+
+---
+
+## Imported Context
+
+@context/architecture.md
+@context/conventions.md
+@context/product.md
 
 ---
 
@@ -41,16 +49,6 @@ AI features (chapter summaries, translation) are on the roadmap. Any AI/LLM serv
 
 ---
 
-## When You Need More
-
-- Architecture, pipeline & AI integration plan → `context/architecture.md`
-- Naming, docstrings & code conventions → `context/conventions.md`
-- Product goals, scope & decisions → `context/product.md`
-- Reusable Claude procedures → `skills/`
-- Saved prompt templates → `prompts/`
-
----
-
 ## Hard Rules
 
 1. One file, one responsibility — `sources/` fetch, `services/` transform, never mix
@@ -71,4 +69,14 @@ AI features (chapter summaries, translation) are on the roadmap. Any AI/LLM serv
 
 ---
 
-*Last updated: 2026-04-11*
+## Available Skills
+
+Invoke with `/skill-name` or describe the task and Claude will load the right one:
+
+- `/add-source` — scaffold a new novel scraper source
+- `/debug-scraper` — diagnose and fix scraping failures
+- `/add-jlpt-feature` — extend Japanese language and JLPT study features
+
+---
+
+*Last updated: 2026-04-13*

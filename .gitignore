@@ -28,3 +28,7 @@ temp/*
 # Environment files
 .env
 .env.*
+
+# Claude local overrides (personal, not shared)
+CLAUDE.local.md
+.claude/settings.local.json
