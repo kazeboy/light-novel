@@ -5,7 +5,7 @@ EbookLib==0.20
 greenlet==3.3.2
 idna==3.11
 Janome==0.5.0
-lxml==6.0.2
+lxml==6.1.0
 markdown-it-py==4.0.0
 mdurl==0.1.2
 playwright==1.58.0
